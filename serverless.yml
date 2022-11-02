@@ -1,0 +1,45 @@
+useDotenv: true
+
+service: ${env:AWS_SERVICE_NAME}
+provider:
+  name: aws
+  runtime: nodejs14.x
+  versionFunctions: false
+  region: ${env:AWS_REGION_INSTANCE}
+  apiName: ${env:AWS_SERVICE_NAME}
+  logRetentionInDays: 30
+  apiGateway:
+    minimumCompressionSize: 1024
+  deploymentBucket:
+    blockPublicAccess: true
+    name: ${env:AWS_DEPLOYMENT_BUCKET}
+resources:
+  Description: ${env:AWS_SERVICE_NAME}
+package:
+  include:
+    - "src/**;"
+    - "package.json"
+  exclude:
+    - coverage/**
+custom:
+  webpack:
+    webpackConfig: ./webpack.config.js
+    packager: "yarn"
+    includeModules: true
+  serverless-offline:
+    lambdaPort: 7003
+    noPrependStageInUrl: true
+functions:
+  zipper:
+    handler: src/handlers/handler.handler
+    events:
+      - http:
+          path: /zipper
+          method: get
+          cors: true
+plugins:
+  - serverless-webpack
+  - serverless-jest-plugin
+  - serverless-offline
+  - serverless-dotenv-plugin
+  - serverless-deployment-bucket
