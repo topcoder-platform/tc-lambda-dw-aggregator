@@ -35,8 +35,8 @@ functions:
     events:
       - http:
           path: /zipper
-          method: get
-          cors: true
+          method: post
+
 plugins:
   - serverless-webpack
   - serverless-jest-plugin
