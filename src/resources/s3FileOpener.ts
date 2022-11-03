@@ -76,6 +76,13 @@ export const getPqFiles = async (Bucket: string, Prefix: string, MaxSize: number
   })
 
 
+  await pqContent.map(async (items) => {
+    await items.map(async (item: any) => {
+      console.log(item)
+    })
+  }
+
+
 }
 
 const getFileContents = async (Bucket: string, Key: string): Promise<Buffer> => {
