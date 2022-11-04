@@ -1,4 +1,4 @@
-import { ParquetSchema, SchemaDefinition } from 'parquets'
+import { ParquetSchema, SchemaDefinition } from "parquets";
 
 const phaseFields = {
   id: { type: "UTF8", optional: true },
@@ -12,7 +12,7 @@ const phaseFields = {
   scheduledStartDate: { type: "TIMESTAMP_MILLIS", optional: true },
 };
 
-export const schema = new ParquetSchema({
+export const challengeSchema = new ParquetSchema({
   id: { type: "UTF8" },
   legacyId: {
     optional: true,
@@ -152,4 +152,3 @@ export const schema = new ParquetSchema({
   updated: { type: "TIMESTAMP_MILLIS", optional: true },
   updatedBy: { type: "UTF8", optional: true },
 });
-

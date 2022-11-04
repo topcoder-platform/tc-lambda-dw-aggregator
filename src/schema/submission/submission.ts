@@ -1,6 +1,6 @@
-import { ParquetSchema } from 'parquets'
+import { ParquetSchema } from "parquets";
 
-export const schema = new ParquetSchema({
+export const submissionSchema = new ParquetSchema({
   id: { type: "UTF8" },
   challengeId: { type: "UTF8" },
   created: { type: "TIMESTAMP_MILLIS" },
@@ -16,4 +16,3 @@ export const schema = new ParquetSchema({
   updatedBy: { type: "UTF8", optional: true },
   url: { type: "UTF8", optional: true },
 });
-

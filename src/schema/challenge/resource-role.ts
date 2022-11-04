@@ -1,6 +1,6 @@
-import { ParquetSchema } from 'parquets'
+import { ParquetSchema } from "parquets";
 
-export const schema = new ParquetSchema({
+export const resourceRoleSchema = new ParquetSchema({
   id: { type: "UTF8" },
   fullReadAccess: { type: "BOOLEAN", optional: true },
   fullWriteAccess: { type: "BOOLEAN", optional: true },
@@ -10,4 +10,3 @@ export const schema = new ParquetSchema({
   nameLower: { type: "UTF8", optional: true },
   selfObtainable: { type: "BOOLEAN", optional: true },
 });
-

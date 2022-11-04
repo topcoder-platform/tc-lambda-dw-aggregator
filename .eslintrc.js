@@ -38,7 +38,6 @@ module.exports = {
     "no-unused-vars": "off",
     "require-await": "off",
     camelcase: ["error", { properties: "always" }],
-    curly: ["error", "multi", "consistent"],
     "max-len": ["error", { code: 150 }],
     "default-case": "error",
     "no-throw-literal": "error",
