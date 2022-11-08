@@ -74,12 +74,12 @@ workflows:
     jobs:
       # NO dev environment for this lambda
       # Development builds are executed on "develop" branch only.
-      # - "build-dev":
-      #     context : org-global
-      #     filters:
-      #       branches:
-      #         only:
-      #           - develop
+      - "build-dev":
+          context : org-global
+          filters:
+            branches:
+              only:
+                - develop
       # production builds are executed on "master" branch only.
       - "build-prod":
           context: org-global
