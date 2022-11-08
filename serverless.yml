@@ -3,13 +3,21 @@ useDotenv: true
 service: ${env:AWS_SERVICE_NAME}
 provider:
   name: aws
+  stage: ${env:DEPLOYMENT_STAGE}
   runtime: nodejs14.x
   versionFunctions: false
-  region: ${env:AWS_REGION_INSTANCE}
+  region: ${env:AWS_REGION}
   apiName: ${env:AWS_SERVICE_NAME}
+  memorySize: 6144
   logRetentionInDays: 30
   apiGateway:
     minimumCompressionSize: 1024
+  vpc:
+    securityGroupIds:
+      - ${env:AWS_SECURITY_GROUP_ID}
+    subnetIds:
+      - ${env:AWS_SUBNET_ID}
+  role: ${env:AWS_ROLE}
   deploymentBucket:
     blockPublicAccess: true
     name: ${env:AWS_DEPLOYMENT_BUCKET}
