@@ -3,7 +3,7 @@ useDotenv: true
 service: ${env:AWS_SERVICE_NAME}
 provider:
   name: aws
-  stage: ${env:DEPLOYMENT_STAGE}
+  stage: ${opt:stage, 'dev'}
   runtime: nodejs14.x
   versionFunctions: false
   region: ${env:AWS_REGION}
