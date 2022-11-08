@@ -14,10 +14,11 @@ provider:
     minimumCompressionSize: 1024
   vpc:
     securityGroupIds:
-      - ${env:AWS_SECURITY_GROUP_ID}
+      - ${file(./config/${self:provider.stage}.json):VPC_SECURITY_GROUP_ID_1}
+      - ${file(./config/${self:provider.stage}.json):VPC_SECURITY_GROUP_ID_2}
     subnetIds:
-      - ${env:AWS_SUBNET_ID}
-  role: ${env:AWS_ROLE}
+      - ${file(./config/${self:provider.stage}.json):VPC_SUBNET_ID_1}
+  role: ${file(./config/${self:provider.stage}.json):LAMBDA_ROLE}
   deploymentBucket:
     blockPublicAccess: true
     name: ${env:AWS_DEPLOYMENT_BUCKET}
