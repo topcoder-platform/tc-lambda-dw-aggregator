@@ -11,6 +11,7 @@ installation_dependency: &installation_dependency
     sudo apt install -y awscli
     #install serverless
     sudo npm install -g serverless
+    sudo npm install -g yarn
 install_deploysuite: &install_deploysuite
   name: Installation of install_deploysuite.
   command: |
@@ -23,7 +24,7 @@ restore_cache: &restore_cache
 install_npm: &install_npm
   name: Install node_modules
   command: |
-    npm install
+    yarn install
 save_cache: &save_cache
   key: docker-node-{{ checksum "package-lock.json" }}
   paths:
@@ -54,7 +55,7 @@ jobs:
     environment:
       DEPLOY_ENV: "DEV"
       LOGICAL_ENV: "dev"
-      APPNAME: "tc-lambda-tc-profiledata"
+      APPNAME: "tc-lambda-dw-aggregator"
       # deploy app
     steps: *build_steps
 
@@ -63,7 +64,7 @@ jobs:
     environment:
       DEPLOY_ENV: "PROD"
       LOGICAL_ENV: "prod"
-      APPNAME: "tc-lambda-tc-profiledata"
+      APPNAME: "tc-lambda-dw-aggregator"
       # deploy app
     steps: *build_steps
 

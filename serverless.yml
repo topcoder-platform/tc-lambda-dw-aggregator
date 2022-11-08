@@ -36,7 +36,6 @@ functions:
       - http:
           path: /zipper
           method: post
-
 plugins:
   - serverless-webpack
   - serverless-jest-plugin
