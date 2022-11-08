@@ -11,7 +11,7 @@ installation_dependency: &installation_dependency
     sudo apt install -y awscli
     #install serverless
     sudo npm install -g serverless
-    sudo npm install -g yarn
+    #sudo npm install -g yarn
 install_deploysuite: &install_deploysuite
   name: Installation of install_deploysuite.
   command: |
