@@ -12,6 +12,7 @@ installation_dependency: &installation_dependency
     #install serverless
     sudo npm install -g serverless
     #sudo npm install -g yarn
+    sudo npm install -g husky
 install_deploysuite: &install_deploysuite
   name: Installation of install_deploysuite.
   command: |
