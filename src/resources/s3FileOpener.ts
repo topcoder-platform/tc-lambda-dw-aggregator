@@ -4,9 +4,13 @@ import {
   ListObjectsCommand,
   GetObjectCommand,
   ListObjectsCommandOutput,
+  PutObjectCommand,
+  CreateBucketCommand,
+  DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
+import fs from 'fs'
 import type { Readable } from "stream";
-import { AWS_REGION } from "src/conf";
+import { AWS_DW_RAW_BUCKET, AWS_REGION } from "src/conf";
 
 interface S3FileList {
   Key: string;
@@ -77,8 +81,8 @@ const getFileContents = async (
   });
   const response = await client.send(getObjectCommand);
 
-  // eslint-disable-next-line consistent-return
   const data: Buffer = await new Promise(
+    // eslint-disable-next-line consistent-return
     (resolve: Function, reject: Function) => {
       try {
         // Store all of data chunks returned from the response data stream
@@ -117,13 +121,40 @@ const getS3FilesList = async (
   const ListCommand = new ListObjectsCommand(params);
   const data: ListObjectsCommandOutput = await client.send(ListCommand);
   const objectList = <S3FileList[]>data.Contents;
-  if (!objectList) throw new Error("No objects found");
-  return objectList;
+  return objectList || [];
 };
 
 const s3Writer = async (
   Bucket: string,
   Key: string,
   Body: Buffer
-): Promise<void> => {};
-export { formatS3Files, getS3FilesList, getAllS3Files };
+): Promise<void> => {
+  const params = {
+    Bucket,
+    Key,
+    Body,
+  };
+  const command = new PutObjectCommand(params);
+  await client.send(command);
+};
+const cleanS3 = async (Bucket: string, Key: string): Promise<void> => {
+  const filesToDelete = await getS3FilesList(Bucket, Key);
+  await Promise.all(filesToDelete.map(async (file: S3FileList) => {
+    const command = new DeleteObjectCommand({ Bucket, Key: file.Key });
+    await client.send(command);
+  }))
+}
+const writeAllToS3 = async (Path: string): Promise<void> => {
+  const command = new CreateBucketCommand({ Bucket: AWS_DW_RAW_BUCKET });
+  await client.send(command);
+  const files = fs.readdirSync("./tmp");
+  await cleanS3(AWS_DW_RAW_BUCKET, Path);
+  await Promise.all(files.map(async (file: string) => {
+    const data = fs.readFileSync(`./tmp/${file}`);
+    await s3Writer(AWS_DW_RAW_BUCKET, `${Path}${file}`, data);
+  }))
+}
+export {
+  formatS3Files, getS3FilesList,
+  getAllS3Files, s3Writer, writeAllToS3
+};

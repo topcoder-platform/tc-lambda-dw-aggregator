@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { ParquetReader, ParquetSchema, ParquetWriter } from "parquets";
+import fs from "fs";
 import {
   submissionSchema,
   challengeSchema,
@@ -12,6 +13,7 @@ import {
 } from "src/schema";
 
 const readPq = async (fileContent: Buffer[][]): Promise<any> => {
+
   const pqContent: any = [];
   await Promise.all(
     fileContent.map(async (fileGroup: Buffer[], index: number) => {
@@ -64,10 +66,15 @@ const convertToPq = async (packed: any, schema: string): Promise<void> => {
 
   await Promise.all(
     packed.map(async (items: any, index: number) => {
-      // const fileStream =
-      const writer = await ParquetWriter.openFile(
+      const dir = './tmp'
+
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir);
+      }
+      const fileStream = fs.createWriteStream(`./tmp/${schema}-${index}.parquet`);
+      const writer = await ParquetWriter.openStream(
         pqSchema,
-        `testFile_${index}.parquet`
+        fileStream
       );
       await Promise.all(
         items.map(async (item: any) => await writer.appendRow(item))
