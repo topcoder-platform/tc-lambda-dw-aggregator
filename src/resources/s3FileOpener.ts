@@ -8,9 +8,9 @@ import {
   CreateBucketCommand,
   DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
-import fs from 'fs'
+import fs from "fs";
 import type { Readable } from "stream";
-import { AWS_DW_RAW_BUCKET, AWS_REGION } from "src/conf";
+import { AWS_DW_RAW_BUCKET, AWS_REGION_INSTANCE, TEMP_FOLDER } from "src/conf";
 
 interface S3FileList {
   Key: string;
@@ -20,13 +20,7 @@ interface S3FileList {
 }
 
 const client = new S3Client({
-  region: AWS_REGION,
-  //TODO:Remove this
-  credentials: {
-    accessKeyId: <string>process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: <string>process.env.AWS_SECRET_ACCESS_KEY,
-    sessionToken: process.env.AWS_SESSION_TOKEN,
-  },
+  region: AWS_REGION_INSTANCE,
 });
 
 const formatS3Files = async (
@@ -57,7 +51,6 @@ const getAllS3Files = async (
   sortedFiles: { Key: string }[][]
 ): Promise<Buffer[][]> => {
   const fileContent: Buffer[][] = [];
-
   await Promise.all(
     sortedFiles.map(async (fileGroup: { Key: string }[], index: number) => {
       fileContent[index] = [];
@@ -117,10 +110,36 @@ const getS3FilesList = async (
   const params = {
     Bucket,
     Prefix,
+    Marker: '',
   };
-  const ListCommand = new ListObjectsCommand(params);
-  const data: ListObjectsCommandOutput = await client.send(ListCommand);
-  const objectList = <S3FileList[]>data.Contents;
+  // Declare truncated as a flag that the while loop is based on.
+  let truncated = true;
+  // Declare a variable to which the key of the last element is assigned to in the response.
+  let pageMarker;
+  // while loop that runs until 'response.truncated' is false.
+  const objectList: S3FileList[] = []
+  while (truncated) {
+    try {
+
+      const ListCommand = new ListObjectsCommand(params);
+      const data: ListObjectsCommandOutput = await client.send(ListCommand);
+      objectList.push(...data.Contents as S3FileList[])
+      // Log the key of every item in the response to standard output.
+      truncated = <boolean>data.IsTruncated;
+      // If truncated is true, assign the key of the last element in the response to the pageMarker variable.
+      if (truncated && data.Contents && Array.isArray(data.Contents.length)) {
+        pageMarker = data.Contents.slice(-1)[0].Key;
+        // Assign the pageMarker value to bucketParams so that the next iteration starts from the new pageMarker.
+        params.Marker = <string>pageMarker;
+      } else {
+        truncated = false;
+      }
+      // At end of the list, response.truncated is false, and the function exits the while loop.
+    } catch (err) {
+      truncated = false;
+    }
+  }
+
   return objectList || [];
 };
 
@@ -139,22 +158,29 @@ const s3Writer = async (
 };
 const cleanS3 = async (Bucket: string, Key: string): Promise<void> => {
   const filesToDelete = await getS3FilesList(Bucket, Key);
-  await Promise.all(filesToDelete.map(async (file: S3FileList) => {
-    const command = new DeleteObjectCommand({ Bucket, Key: file.Key });
-    await client.send(command);
-  }))
-}
+  await Promise.all(
+    filesToDelete.map(async (file: S3FileList) => {
+      const command = new DeleteObjectCommand({ Bucket, Key: file.Key });
+      await client.send(command);
+    })
+  );
+};
 const writeAllToS3 = async (Path: string): Promise<void> => {
   const command = new CreateBucketCommand({ Bucket: AWS_DW_RAW_BUCKET });
   await client.send(command);
-  const files = fs.readdirSync("./tmp");
+  const files = fs.readdirSync(TEMP_FOLDER);
   await cleanS3(AWS_DW_RAW_BUCKET, Path);
-  await Promise.all(files.map(async (file: string) => {
-    const data = fs.readFileSync(`./tmp/${file}`);
-    await s3Writer(AWS_DW_RAW_BUCKET, `${Path}${file}`, data);
-  }))
-}
-export {
-  formatS3Files, getS3FilesList,
-  getAllS3Files, s3Writer, writeAllToS3
+  await Promise.all(
+    files.map(async (file: string) => {
+      const data = fs.readFileSync(`${TEMP_FOLDER}/${file}`);
+      await s3Writer(AWS_DW_RAW_BUCKET, `${Path}${file}`, data);
+    })
+  );
 };
+
+const getFolderList = async (Bucket: string, Prefix: string): Promise<any> => {
+  const command = new ListObjectsCommand({ Bucket, Prefix, Delimiter: "/" });
+  const data = await client.send(command);
+  return data.CommonPrefixes;
+}
+export { formatS3Files, getS3FilesList, getAllS3Files, s3Writer, writeAllToS3, getFolderList };

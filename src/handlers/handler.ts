@@ -1,12 +1,13 @@
 import { APIGatewayEvent, APIGatewayProxyResult } from "aws-lambda";
 import { convertToPq, readPq } from "src/resources/pqProcessor";
-import fs from 'fs'
 import {
   formatS3Files,
   getAllS3Files,
+  getFolderList,
   getS3FilesList,
-  writeAllToS3
+  writeAllToS3,
 } from "src/resources/s3FileOpener";
+import { cleanTemp } from "src/utils/utils";
 
 const handler = async (
   event: APIGatewayEvent
@@ -17,7 +18,7 @@ const handler = async (
   if (!Bucket || !Path || !MaxSize || !Schema)
     throw new Error("Missing required parameters");
   //deleting all old files
-  fs.rmSync('./tmp', { recursive: true, force: true });
+  await cleanTemp();
   //Convert max size to bytes
   const fileList = await getS3FilesList(Bucket, Path);
   const sortedFiles = await formatS3Files(fileList, MaxSize * 1024 * 1024);
@@ -33,8 +34,32 @@ const handler = async (
 
   return {
     statusCode: 200,
-    body: "done",
+    body: JSON.stringify({
+      filesProcessed: fileList.length,
+      filesWritten: sortedFiles.length,
+    }),
   };
 };
 
-export { handler };
+const zipMonthly = async (event: APIGatewayEvent): Promise<APIGatewayProxyResult> => {
+  const { Bucket, Path, MaxSize, Schema } = event.body
+    ? JSON.parse(event.body)
+    : null;
+  if (!Bucket || !Path || !MaxSize || !Schema)
+    throw new Error("Missing required parameters");
+
+  const data = await getFolderList(Bucket, Path)
+  for (const item of data) {
+
+    await handler(<APIGatewayEvent>{ body: JSON.stringify({ Bucket, Path: item.Prefix, MaxSize, Schema }) })
+  }
+
+  return {
+    statusCode: 200,
+    body: 'ok'
+  };
+}
+
+
+
+export { handler, zipMonthly };

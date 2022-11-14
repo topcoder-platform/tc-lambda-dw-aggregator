@@ -6,19 +6,26 @@ provider:
   stage: ${opt:stage, 'dev'}
   runtime: nodejs14.x
   versionFunctions: false
-  region: ${env:AWS_REGION}
+  region: ${env:AWS_REGION_INSTANCE}
   apiName: ${env:AWS_SERVICE_NAME}
   memorySize: 6144
   logRetentionInDays: 30
   apiGateway:
     minimumCompressionSize: 1024
-  vpc:
-    securityGroupIds:
-      - ${file(./config/${self:provider.stage}.json):VPC_SECURITY_GROUP_ID_1}
-      - ${file(./config/${self:provider.stage}.json):VPC_SECURITY_GROUP_ID_2}
-    subnetIds:
-      - ${file(./config/${self:provider.stage}.json):VPC_SUBNET_ID_1}
-  role: ${file(./config/${self:provider.stage}.json):LAMBDA_ROLE}
+  # vpc:
+  #   securityGroupIds:
+  #     - ${file(./config/${self:provider.stage}.json):VPC_SECURITY_GROUP_ID_1}
+  #     - ${file(./config/${self:provider.stage}.json):VPC_SECURITY_GROUP_ID_2}
+  #   subnetIds:
+  #     - ${file(./config/${self:provider.stage}.json):VPC_SUBNET_ID_1}
+  # role: ${file(./config/${self:provider.stage}.json):LAMBDA_ROLE}
+  iam:
+    role:
+      statements:
+        # Allow functions to list all buckets
+        - Effect: Allow
+          Action: "s3:*"
+          Resource: "*"
   deploymentBucket:
     blockPublicAccess: true
     name: ${env:AWS_DEPLOYMENT_BUCKET}
@@ -45,8 +52,16 @@ functions:
       - http:
           path: /zipper
           method: post
-  firstFunc:
-    handler: src/handlers/stepFuncts.handler
+  bulkZipper:
+    handler: src/handlers/handler.zipMonthly
+    events:
+      - http:
+          path: /zipMonthly
+          method: post
+  step1:
+    handler: src/handlers/stepFuncts.step1
+  step2:
+    handler: src/handlers/stepFuncts.step2
 stepFunctions:
   stateMachines:
     firstFunc:
@@ -62,7 +77,12 @@ stepFunctions:
           HelloWorld:
             Type: Task
             Resource:
-              Fn::GetAtt: [firstFunc, Arn]
+              Fn::GetAtt: [step1, Arn]
+            Next: Goodbye
+          Goodbye:
+            Type: Task
+            Resource:
+              Fn::GetAtt: [step2, Arn]
             End: true
 plugins:
   - serverless-webpack

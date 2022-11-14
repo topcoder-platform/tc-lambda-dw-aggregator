@@ -1,6 +1,9 @@
-const handler = async (): Promise<void> => {
-
+const step1 = async (): Promise<void> => {
   console.log("step 1");
-}
+};
 
-export { handler };
+const step2 = async (): Promise<void> => {
+  console.log("step 2");
+};
+
+export { step1, step2 };
