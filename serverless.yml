@@ -52,11 +52,23 @@ functions:
       - http:
           path: /zipper
           method: post
-  bulkZipper:
+  monthlyZipper:
     handler: src/handlers/handler.zipMonthly
     events:
       - http:
           path: /zipMonthly
+          method: post
+  yearlyZipper:
+    handler: src/handlers/handler.zipYearly
+    events:
+      - http:
+          path: /zipYearly
+          method: post
+  zipAll:
+    handler: src/handlers/handler.zipAll
+    events:
+      - http:
+          path: /zipAll
           method: post
   step1:
     handler: src/handlers/stepFuncts.step1

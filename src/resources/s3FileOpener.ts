@@ -110,29 +110,26 @@ const getS3FilesList = async (
   const params = {
     Bucket,
     Prefix,
-    Marker: '',
+    Marker: "",
   };
   // Declare truncated as a flag that the while loop is based on.
   let truncated = true;
   // Declare a variable to which the key of the last element is assigned to in the response.
   let pageMarker;
   // while loop that runs until 'response.truncated' is false.
-  const objectList: S3FileList[] = []
+  const objectList: S3FileList[] = [];
   while (truncated) {
     try {
-
       const ListCommand = new ListObjectsCommand(params);
       const data: ListObjectsCommandOutput = await client.send(ListCommand);
-      objectList.push(...data.Contents as S3FileList[])
+      objectList.push(...(data.Contents as S3FileList[]));
       // Log the key of every item in the response to standard output.
       truncated = <boolean>data.IsTruncated;
       // If truncated is true, assign the key of the last element in the response to the pageMarker variable.
-      if (truncated && data.Contents && Array.isArray(data.Contents.length)) {
+      if (truncated && data.Contents) {
         pageMarker = data.Contents.slice(-1)[0].Key;
         // Assign the pageMarker value to bucketParams so that the next iteration starts from the new pageMarker.
         params.Marker = <string>pageMarker;
-      } else {
-        truncated = false;
       }
       // At end of the list, response.truncated is false, and the function exits the while loop.
     } catch (err) {
@@ -182,5 +179,12 @@ const getFolderList = async (Bucket: string, Prefix: string): Promise<any> => {
   const command = new ListObjectsCommand({ Bucket, Prefix, Delimiter: "/" });
   const data = await client.send(command);
   return data.CommonPrefixes;
-}
-export { formatS3Files, getS3FilesList, getAllS3Files, s3Writer, writeAllToS3, getFolderList };
+};
+export {
+  formatS3Files,
+  getS3FilesList,
+  getAllS3Files,
+  s3Writer,
+  writeAllToS3,
+  getFolderList,
+};

@@ -15,7 +15,7 @@ const handler = async (
   const { Bucket, Path, MaxSize, Schema } = event.body
     ? JSON.parse(event.body)
     : null;
-  if (!Bucket || !Path || !MaxSize || !Schema)
+  if (!Bucket || !Path || !MaxSize || !Schema || !Path.endsWith("/"))
     throw new Error("Missing required parameters");
   //deleting all old files
   await cleanTemp();
@@ -41,25 +41,78 @@ const handler = async (
   };
 };
 
-const zipMonthly = async (event: APIGatewayEvent): Promise<APIGatewayProxyResult> => {
+const zipMonthly = async (
+  event: APIGatewayEvent
+): Promise<APIGatewayProxyResult> => {
   const { Bucket, Path, MaxSize, Schema } = event.body
     ? JSON.parse(event.body)
     : null;
-  if (!Bucket || !Path || !MaxSize || !Schema)
+  if (!Bucket || !Path || !MaxSize || !Schema || !Path.endsWith("/"))
     throw new Error("Missing required parameters");
 
-  const data = await getFolderList(Bucket, Path)
-  for (const item of data) {
-
-    await handler(<APIGatewayEvent>{ body: JSON.stringify({ Bucket, Path: item.Prefix, MaxSize, Schema }) })
+  const data = await getFolderList(Bucket, Path);
+  if (data) {
+    for (const item of data) {
+      await handler(<APIGatewayEvent>{
+        body: JSON.stringify({ Bucket, Path: item.Prefix, MaxSize, Schema }),
+      });
+    }
   }
 
   return {
     statusCode: 200,
-    body: 'ok'
+    body: "ok",
   };
-}
+};
 
+const zipYearly = async (
+  event: APIGatewayEvent
+): Promise<APIGatewayProxyResult> => {
+  const { Bucket, Path, MaxSize, Schema } = event.body
+    ? JSON.parse(event.body)
+    : null;
+  if (!Bucket || !Path || !MaxSize || !Schema || !Path.endsWith("/"))
+    throw new Error("Missing required parameters");
 
+  const data = await getFolderList(Bucket, Path);
+  if (data) {
+    for (const item of data) {
+      console.log(`Processing  Month:${item.Prefix}`);
+      await zipMonthly(<APIGatewayEvent>{
+        body: JSON.stringify({ Bucket, Path: item.Prefix, MaxSize, Schema }),
+      });
+    }
+  }
 
-export { handler, zipMonthly };
+  return {
+    statusCode: 200,
+    body: "ok",
+  };
+};
+
+const zipAll = async (
+  event: APIGatewayEvent
+): Promise<APIGatewayProxyResult> => {
+  const { Bucket, Path, MaxSize, Schema } = event.body
+    ? JSON.parse(event.body)
+    : null;
+  if (!Bucket || !Path || !MaxSize || !Schema || !Path.endsWith("/"))
+    throw new Error("Missing required parameters");
+
+  const data = await getFolderList(Bucket, Path);
+  if (data) {
+    for (const item of data) {
+      console.log(`Processing year: ${item.Prefix}`);
+      await zipYearly(<APIGatewayEvent>{
+        body: JSON.stringify({ Bucket, Path: item.Prefix, MaxSize, Schema }),
+      });
+    }
+  }
+
+  return {
+    statusCode: 200,
+    body: "ok",
+  };
+};
+
+export { handler, zipMonthly, zipYearly, zipAll };

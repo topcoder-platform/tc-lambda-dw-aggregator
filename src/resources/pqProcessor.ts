@@ -65,7 +65,10 @@ const convertToPq = async (packed: any, schema: string): Promise<void> => {
 
   await Promise.all(
     packed.map(async (items: any, index: number) => {
-      const writer = await ParquetWriter.openFile(pqSchema, `${TEMP_FOLDER}/${schema}-${index}.parquet`);
+      const writer = await ParquetWriter.openFile(
+        pqSchema,
+        `${TEMP_FOLDER}/${schema}-${index}.parquet`
+      );
       await Promise.all(
         items.map(async (item: any) => await writer.appendRow(item))
       );
