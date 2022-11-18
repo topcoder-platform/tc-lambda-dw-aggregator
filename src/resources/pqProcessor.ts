@@ -10,6 +10,7 @@ import {
   resourceRoleSchema,
   resourceSchema,
 } from "src/schema";
+import { TEMP_FOLDER } from "src/conf";
 
 const readPq = async (fileContent: Buffer[][]): Promise<any> => {
   const pqContent: any = [];
@@ -64,10 +65,9 @@ const convertToPq = async (packed: any, schema: string): Promise<void> => {
 
   await Promise.all(
     packed.map(async (items: any, index: number) => {
-      // const fileStream =
       const writer = await ParquetWriter.openFile(
         pqSchema,
-        `testFile_${index}.parquet`
+        `${TEMP_FOLDER}/${schema}-${index}.parquet`
       );
       await Promise.all(
         items.map(async (item: any) => await writer.appendRow(item))
