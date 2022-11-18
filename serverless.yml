@@ -70,36 +70,10 @@ functions:
       - http:
           path: /zipAll
           method: post
-  step1:
-    handler: src/handlers/stepFuncts.step1
-  step2:
-    handler: src/handlers/stepFuncts.step2
-stepFunctions:
-  stateMachines:
-    firstFunc:
-      name: ${env:AWS_SERVICE_NAME}-firstFunc
-      events:
-        - http:
-            path: /firstFunc
-            method: get
-      definition:
-        Comment: "A Hello World example of the Amazon States Language using an AWS Lambda Function"
-        StartAt: HelloWorld
-        States:
-          HelloWorld:
-            Type: Task
-            Resource:
-              Fn::GetAtt: [step1, Arn]
-            Next: Goodbye
-          Goodbye:
-            Type: Task
-            Resource:
-              Fn::GetAtt: [step2, Arn]
-            End: true
+
 plugins:
   - serverless-webpack
   - serverless-jest-plugin
   - serverless-offline
   - serverless-dotenv-plugin
   - serverless-deployment-bucket
-  - serverless-step-functions
