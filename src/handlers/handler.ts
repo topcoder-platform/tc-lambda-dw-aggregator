@@ -12,6 +12,7 @@ import { cleanTemp } from "src/utils/utils";
 const handler = async (
   event: APIGatewayEvent
 ): Promise<APIGatewayProxyResult> => {
+  console.log("Event: ", event);
   const { Bucket, Path, MaxSize, Schema } = event.body
     ? JSON.parse(event.body)
     : null;
