@@ -1,5 +1,5 @@
 import { APIGatewayEvent, APIGatewayProxyResult } from "aws-lambda";
-import { convertToPq, readPq } from "src/resources/pqProcessor";
+import { convertToPq, getSchema, readPq } from "src/resources/pqProcessor";
 import {
   formatS3Files,
   getAllS3Files,
@@ -13,11 +13,19 @@ const handler = async (
   event: APIGatewayEvent
 ): Promise<APIGatewayProxyResult> => {
   console.log("Event: ", event);
-  const { Bucket, Path, MaxSize, Schema } = event.body
-    ? JSON.parse(event.body)
-    : null;
+  const { Bucket, Path, MaxSize, Schema } = (event as APIGatewayEvent).body
+    ? JSON.parse((event as APIGatewayEvent).body || '')
+    : event;
   if (!Bucket || !Path || !MaxSize || !Schema || !Path.endsWith("/"))
     throw new Error("Missing required parameters");
+  try {
+    getSchema(Schema);
+  } catch (e) {
+    return {
+      statusCode: 200,
+      body: 'Invalid Schema',
+    };
+  }
   //deleting all old files
   await cleanTemp();
   //Convert max size to bytes
@@ -45,9 +53,9 @@ const handler = async (
 const zipMonthly = async (
   event: APIGatewayEvent
 ): Promise<APIGatewayProxyResult> => {
-  const { Bucket, Path, MaxSize, Schema } = event.body
-    ? JSON.parse(event.body)
-    : null;
+  const { Bucket, Path, MaxSize, Schema } = (event as APIGatewayEvent).body
+    ? JSON.parse((event as APIGatewayEvent).body || '')
+    : event;
   if (!Bucket || !Path || !MaxSize || !Schema || !Path.endsWith("/"))
     throw new Error("Missing required parameters");
 
@@ -69,9 +77,9 @@ const zipMonthly = async (
 const zipYearly = async (
   event: APIGatewayEvent
 ): Promise<APIGatewayProxyResult> => {
-  const { Bucket, Path, MaxSize, Schema } = event.body
-    ? JSON.parse(event.body)
-    : null;
+  const { Bucket, Path, MaxSize, Schema } = (event as APIGatewayEvent).body
+    ? JSON.parse((event as APIGatewayEvent).body || '')
+    : event;
   if (!Bucket || !Path || !MaxSize || !Schema || !Path.endsWith("/"))
     throw new Error("Missing required parameters");
 
@@ -94,9 +102,9 @@ const zipYearly = async (
 const zipAll = async (
   event: APIGatewayEvent
 ): Promise<APIGatewayProxyResult> => {
-  const { Bucket, Path, MaxSize, Schema } = event.body
-    ? JSON.parse(event.body)
-    : null;
+  const { Bucket, Path, MaxSize, Schema } = (event as APIGatewayEvent).body
+    ? JSON.parse((event as APIGatewayEvent).body || '')
+    : event;
   if (!Bucket || !Path || !MaxSize || !Schema || !Path.endsWith("/"))
     throw new Error("Missing required parameters");
 

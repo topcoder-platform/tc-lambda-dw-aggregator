@@ -36,6 +36,23 @@ const readPq = async (fileContent: Buffer[][]): Promise<any> => {
   return pqContent;
 };
 const convertToPq = async (packed: any, schema: string): Promise<void> => {
+  const pqSchema: ParquetSchema = getSchema(schema);
+
+  await Promise.all(
+    packed.map(async (items: any, index: number) => {
+      const writer = await ParquetWriter.openFile(
+        pqSchema,
+        `${TEMP_FOLDER}/${schema}-${index}.parquet`
+      );
+      await Promise.all(
+        items.map(async (item: any) => await writer.appendRow(item))
+      );
+      await writer.close();
+    })
+  );
+};
+
+const getSchema = (schema: string): ParquetSchema => {
   let pqSchema: ParquetSchema;
   switch (schema) {
     case "submission":
@@ -62,19 +79,6 @@ const convertToPq = async (packed: any, schema: string): Promise<void> => {
     default:
       throw new Error("Invalid schema");
   }
-
-  await Promise.all(
-    packed.map(async (items: any, index: number) => {
-      const writer = await ParquetWriter.openFile(
-        pqSchema,
-        `${TEMP_FOLDER}/${schema}-${index}.parquet`
-      );
-      await Promise.all(
-        items.map(async (item: any) => await writer.appendRow(item))
-      );
-      await writer.close();
-    })
-  );
-};
-
-export { convertToPq, readPq };
+  return pqSchema;
+}
+export { convertToPq, readPq, getSchema };
