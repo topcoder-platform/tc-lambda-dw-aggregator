@@ -18,6 +18,7 @@ const handler = async (
     : event;
   if (!Bucket || !Path || !MaxSize || !Schema || !Path.endsWith("/"))
     throw new Error("Missing required parameters");
+
   try {
     getSchema(Schema);
   } catch (e) {
@@ -124,4 +125,25 @@ const zipAll = async (
   };
 };
 
-export { handler, zipMonthly, zipYearly, zipAll };
+const calculateDate = async (event: APIGatewayEvent): Promise<APIGatewayProxyResult> => {
+  const { Bucket, Path, MaxSize, Schema } = (event as APIGatewayEvent).body
+    ? JSON.parse((event as APIGatewayEvent).body || '')
+    : event;
+  if (!Bucket || !Path || !MaxSize || !Schema || !Path.endsWith("/"))
+    throw new Error("Missing required parameters");
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  const year = yesterday.getFullYear();
+  const month = yesterday.getMonth() + 1;
+  const day = yesterday.getDate();
+  const timePath = `${Path}${year}/${month}/${day}/`;
+  await handler(<APIGatewayEvent>{
+    body: JSON.stringify({ Bucket, Path: timePath, MaxSize, Schema }),
+  });
+  return {
+    statusCode: 200,
+    body: "ok",
+  };
+}
+export { handler, zipMonthly, zipYearly, zipAll, calculateDate };

@@ -70,6 +70,12 @@ functions:
       - http:
           path: /zipAll
           method: post
+  calculateDate:
+    handler: src/handlers/handler.calculateDate
+    events:
+      - http:
+          path: /calculateDate
+          method: post
 
 plugins:
   - serverless-webpack
