@@ -1,4 +1,6 @@
 import { APIGatewayEvent, APIGatewayProxyResult } from "aws-lambda";
+import { SFNClient, SendTaskHeartbeatCommand, SendTaskSuccessCommand, SendTaskFailureCommand } from "@aws-sdk/client-sfn";
+import { RedshiftDataClient, ExecuteStatementCommand, DescribeStatementCommand } from "@aws-sdk/client-redshift-data";
 import { convertToPq, getSchema, readPq } from "src/resources/pqProcessor";
 import {
   formatS3Files,
@@ -7,7 +9,9 @@ import {
   getS3FilesList,
   writeAllToS3,
 } from "src/resources/s3FileOpener";
+
 import { cleanTemp } from "src/utils/utils";
+import { AWS_REGION_INSTANCE } from "src/conf";
 
 const handler = async (
   event: APIGatewayEvent
@@ -146,4 +150,65 @@ const calculateDate = async (event: APIGatewayEvent): Promise<APIGatewayProxyRes
     body: "ok",
   };
 }
-export { handler, zipMonthly, zipYearly, zipAll, calculateDate };
+
+const runProc = async (event: APIGatewayEvent): Promise<APIGatewayProxyResult> => {
+  const { taskToken, flowName } = (event as APIGatewayEvent).body
+    ? JSON.parse((event as APIGatewayEvent).body || '')
+    : event;
+  console.log({ taskToken, flowName })
+  // a client can be shared by different commands.
+  const awsRedshiftClient = new RedshiftDataClient({
+    region: AWS_REGION_INSTANCE
+  });
+
+  // a client can be shared by different commands.
+  const sfnClient = new SFNClient({
+    region: AWS_REGION_INSTANCE
+  });
+  const params = {
+    ClusterIdentifier: "dw-dev-raw",
+    Database: "dwraw",
+    DbUser: "admin",
+    Sql: `call edw.procedure_load_control_call_from_source('${flowName}');`,
+  }
+  const command = new ExecuteStatementCommand(params);
+  const executeStatementResult = await awsRedshiftClient.send(command);
+  let final = await awsRedshiftClient.send(new DescribeStatementCommand({
+    Id: executeStatementResult.Id
+  }));
+  const sendTaskHeartbeatCommand = new SendTaskHeartbeatCommand({
+    taskToken,
+  });
+  await sfnClient.send(sendTaskHeartbeatCommand);
+  while (["PICKED", "STARTED", "SUBMITTED"].includes(final.Status as string)) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await sfnClient.send(sendTaskHeartbeatCommand);
+    await new Promise((r: any) => setTimeout(r, 2000));
+    await sfnClient.send(sendTaskHeartbeatCommand);
+    console.log(final)
+    final = await awsRedshiftClient.send(new DescribeStatementCommand({
+      Id: executeStatementResult.Id
+    }));
+    await sfnClient.send(sendTaskHeartbeatCommand);
+  }
+  console.log(final);
+  if (final.Status === "FINISHED") {
+    const sendTaskSuccessCommand = new SendTaskSuccessCommand({
+      taskToken,
+      output: '{"status":"ok"}'
+    })
+    await sfnClient.send(sendTaskSuccessCommand);
+  } else {
+    const sendTaskFailureCommand = new SendTaskFailureCommand({
+      taskToken,
+      cause: "Failed",
+      error: final.Error
+    })
+    await sfnClient.send(sendTaskFailureCommand);
+  }
+  return {
+    statusCode: 200,
+    body: "ok",
+  };
+}
+export { handler, zipMonthly, zipYearly, zipAll, calculateDate, runProc };

@@ -24,7 +24,15 @@ provider:
       statements:
         # Allow functions to list all buckets
         - Effect: Allow
-          Action: "s3:*"
+          Action:
+            - "s3:*"
+            - "redshift-data:ExecuteStatement"
+            - "redshift-data:DescribeStatement"
+            - "redshift:GetClusterCredentials"
+            - "states:SendTaskHeartbeat"
+            - "states:DescribeExecution"
+            - "states:SendTaskSuccess"
+            - "states:SendTaskFailure"
           Resource: "*"
   deploymentBucket:
     blockPublicAccess: true
@@ -48,34 +56,48 @@ custom:
 functions:
   zipper:
     handler: src/handlers/handler.handler
+    timeout: 900
+    architecture: arm64
     events:
       - http:
           path: /zipper
           method: post
   monthlyZipper:
     handler: src/handlers/handler.zipMonthly
+    timeout: 900
+    architecture: arm64
     events:
       - http:
           path: /zipMonthly
           method: post
   yearlyZipper:
     handler: src/handlers/handler.zipYearly
+    timeout: 900
+    architecture: arm64
     events:
       - http:
           path: /zipYearly
           method: post
   zipAll:
     handler: src/handlers/handler.zipAll
+    timeout: 900
+    architecture: arm64
     events:
       - http:
           path: /zipAll
           method: post
   calculateDate:
     handler: src/handlers/handler.calculateDate
+    timeout: 900
+    architecture: arm64
     events:
       - http:
           path: /calculateDate
           method: post
+  runProc:
+    handler: src/handlers/handler.runProc
+    timeout: 900
+    architecture: arm64
 
 plugins:
   - serverless-webpack

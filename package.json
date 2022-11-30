@@ -44,7 +44,10 @@
     "webpack-node-externals": "^3.0.0"
   },
   "dependencies": {
+    "@aws-sdk/client-redshift": "^3.216.0",
+    "@aws-sdk/client-redshift-data": "^3.218.0",
     "@aws-sdk/client-s3": "^3.201.0",
+    "@aws-sdk/client-sfn": "^3.218.0",
     "aws-lambda": "^1.0.6",
     "aws-multipart-parser": "^0.2.1",
     "aws-sdk": "^2.978.0",
