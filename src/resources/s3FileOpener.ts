@@ -6,7 +6,7 @@ import {
   ListObjectsCommandOutput,
   PutObjectCommand,
   CreateBucketCommand,
-  DeleteObjectCommand,
+  DeleteObjectsCommand,
 } from "@aws-sdk/client-s3";
 import fs from "fs";
 import type { Readable } from "stream";
@@ -105,7 +105,8 @@ const getFileContents = async (
 
 const getS3FilesList = async (
   Bucket: string,
-  Prefix: string
+  Prefix: string,
+  pqList: boolean = true
 ): Promise<S3FileList[]> => {
   const params = {
     Bucket,
@@ -117,7 +118,7 @@ const getS3FilesList = async (
   // Declare a variable to which the key of the last element is assigned to in the response.
   let pageMarker;
   // while loop that runs until 'response.truncated' is false.
-  const objectList: S3FileList[] = [];
+  let objectList: S3FileList[] = [];
   while (truncated) {
     try {
       const ListCommand = new ListObjectsCommand(params);
@@ -136,7 +137,9 @@ const getS3FilesList = async (
       truncated = false;
     }
   }
-
+  if (pqList) {
+    objectList = objectList.filter((item: S3FileList) => item.Key.endsWith(".parquet"));
+  }
   return objectList || [];
 };
 
@@ -154,13 +157,11 @@ const s3Writer = async (
   await client.send(command);
 };
 const cleanS3 = async (Bucket: string, Key: string): Promise<void> => {
-  const filesToDelete = await getS3FilesList(Bucket, Key);
-  await Promise.all(
-    filesToDelete.map(async (file: S3FileList) => {
-      const command = new DeleteObjectCommand({ Bucket, Key: file.Key });
-      await client.send(command);
-    })
-  );
+  const filesToDelete = await getS3FilesList(Bucket, Key, false);
+  const Objects = filesToDelete.map((item: S3FileList) => ({ Key: item.Key }));
+  if (Objects.length === 0) return;
+  const command = new DeleteObjectsCommand({ Bucket, Delete: { Objects } });
+  await client.send(command);
 };
 const writeAllToS3 = async (Path: string): Promise<void> => {
   const command = new CreateBucketCommand({ Bucket: AWS_DW_RAW_BUCKET });
@@ -180,6 +181,11 @@ const getFolderList = async (Bucket: string, Prefix: string): Promise<any> => {
   const data = await client.send(command);
   return data.CommonPrefixes;
 };
+
+const verifyPath = async (Bucket: string, Prefix: string): Promise<any> => {
+  const command = new PutObjectCommand({ Bucket, Key: Prefix });
+  await client.send(command);
+}
 export {
   formatS3Files,
   getS3FilesList,
@@ -187,4 +193,6 @@ export {
   s3Writer,
   writeAllToS3,
   getFolderList,
+  cleanS3,
+  verifyPath,
 };

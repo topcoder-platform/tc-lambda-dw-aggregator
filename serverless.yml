@@ -98,6 +98,14 @@ functions:
     handler: src/handlers/handler.runProc
     timeout: 900
     architecture: arm64
+  removeOldFiles:
+    handler: src/handlers/handler.removeOldFiles
+    timeout: 900
+    architecture: arm64
+    events:
+      - http:
+          path: /removeOldFiles
+          method: post
 
 plugins:
   - serverless-webpack

@@ -1,22 +1,32 @@
 import { APIGatewayEvent, APIGatewayProxyResult } from "aws-lambda";
-import { SFNClient, SendTaskHeartbeatCommand, SendTaskSuccessCommand, SendTaskFailureCommand } from "@aws-sdk/client-sfn";
-import { RedshiftDataClient, ExecuteStatementCommand, DescribeStatementCommand } from "@aws-sdk/client-redshift-data";
+import {
+  SFNClient, SendTaskHeartbeatCommand,
+  SendTaskSuccessCommand, SendTaskFailureCommand
+} from "@aws-sdk/client-sfn";
+import {
+  RedshiftDataClient, ExecuteStatementCommand,
+  DescribeStatementCommand
+} from "@aws-sdk/client-redshift-data";
 import { convertToPq, getSchema, readPq } from "src/resources/pqProcessor";
 import {
   formatS3Files,
   getAllS3Files,
   getFolderList,
   getS3FilesList,
+  cleanS3,
   writeAllToS3,
+  verifyPath,
 } from "src/resources/s3FileOpener";
 
+import {
+  AWS_REGION_INSTANCE, REDSHIFT_CLUSTER,
+  REDSHIFT_DB, REDSHIFT_USER
+} from "src/conf";
 import { cleanTemp } from "src/utils/utils";
-import { AWS_REGION_INSTANCE } from "src/conf";
 
 const handler = async (
   event: APIGatewayEvent
 ): Promise<APIGatewayProxyResult> => {
-  console.log("Event: ", event);
   const { Bucket, Path, MaxSize, Schema } = (event as APIGatewayEvent).body
     ? JSON.parse((event as APIGatewayEvent).body || '')
     : event;
@@ -166,9 +176,9 @@ const runProc = async (event: APIGatewayEvent): Promise<APIGatewayProxyResult> =
     region: AWS_REGION_INSTANCE
   });
   const params = {
-    ClusterIdentifier: "dw-dev-raw",
-    Database: "dwraw",
-    DbUser: "admin",
+    ClusterIdentifier: REDSHIFT_CLUSTER,
+    Database: REDSHIFT_DB,
+    DbUser: REDSHIFT_USER,
     Sql: `call edw.procedure_load_control_call_from_source('${flowName}');`,
   }
   const command = new ExecuteStatementCommand(params);
@@ -181,8 +191,8 @@ const runProc = async (event: APIGatewayEvent): Promise<APIGatewayProxyResult> =
   });
   await sfnClient.send(sendTaskHeartbeatCommand);
   while (["PICKED", "STARTED", "SUBMITTED"].includes(final.Status as string)) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await sfnClient.send(sendTaskHeartbeatCommand);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await new Promise((r: any) => setTimeout(r, 2000));
     await sfnClient.send(sendTaskHeartbeatCommand);
     console.log(final)
@@ -211,4 +221,19 @@ const runProc = async (event: APIGatewayEvent): Promise<APIGatewayProxyResult> =
     body: "ok",
   };
 }
-export { handler, zipMonthly, zipYearly, zipAll, calculateDate, runProc };
+
+const removeOldFiles = async (event: APIGatewayEvent): Promise<APIGatewayProxyResult> => {
+  const { Bucket, Path } = (event as APIGatewayEvent).body
+    ? JSON.parse((event as APIGatewayEvent).body || '')
+    : event;
+  if (!Bucket || !Path || !Path.endsWith("/"))
+    throw new Error("Missing required parameters");
+  await cleanS3(Bucket, Path)
+  await verifyPath(Bucket, Path)
+  return {
+    statusCode: 200,
+    body: "ok",
+  };
+}
+
+export { handler, zipMonthly, zipYearly, zipAll, calculateDate, runProc, removeOldFiles };
