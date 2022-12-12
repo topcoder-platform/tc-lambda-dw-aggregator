@@ -160,8 +160,23 @@ const cleanS3 = async (Bucket: string, Key: string): Promise<void> => {
   const filesToDelete = await getS3FilesList(Bucket, Key, false);
   const Objects = filesToDelete.map((item: S3FileList) => ({ Key: item.Key }));
   if (Objects.length === 0) return;
-  const command = new DeleteObjectsCommand({ Bucket, Delete: { Objects } });
-  await client.send(command);
+  if (Objects.length > 1000) {
+    const splitArray = (item: { Key: string }[], size: number) => {
+      const arr = [];
+      for (let i = 0; i < item.length; i += size) {
+        arr.push(item.slice(i, i + size));
+      }
+      return arr;
+    }
+    const smallChunks = splitArray(Objects, 1000);
+    await Promise.all(smallChunks.map(async (chunk: { Key: string }[]) => {
+      const command = new DeleteObjectsCommand({ Bucket, Delete: { Objects: chunk } });
+      await client.send(command);
+    }))
+  } else {
+    const command = new DeleteObjectsCommand({ Bucket, Delete: { Objects } });
+    await client.send(command);
+  }
 };
 const writeAllToS3 = async (Path: string): Promise<void> => {
   const command = new CreateBucketCommand({ Bucket: AWS_DW_RAW_BUCKET });

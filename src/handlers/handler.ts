@@ -124,6 +124,7 @@ const zipAll = async (
     throw new Error("Missing required parameters");
 
   const data = await getFolderList(Bucket, Path);
+  console.log(Path);
   if (data) {
     for (const item of data) {
       console.log(`Processing year: ${item.Prefix}`);
